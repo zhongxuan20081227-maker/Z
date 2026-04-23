@@ -2,237 +2,277 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>AI 英文自主學習系統</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 英文學習系統 - 客製化版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
         :root {
-            --dark-blue: #2c3e50;
-            --light-blue: #34495e;
-            --accent: #a29bfe;
+            --sidebar-color: #2c3e50;
+            --active-color: #34495e;
+            --accent: #6c5ce7;
             --danger: #e74c3c;
-            --success: #2ecc71;
+            --wrong-bg: #e67e22;
         }
 
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; height: 100vh; background: #f4f7f6; }
+        body { font-family: 'Segoe UI', "Microsoft JhengHei", sans-serif; margin: 0; display: flex; height: 100vh; background: #f0f2f5; }
 
         /* 左側側邊欄 */
         #sidebar {
-            width: 280px; background: var(--dark-blue); color: white;
-            display: flex; flex-direction: column; padding: 20px; transition: 0.3s;
+            width: 300px; background: var(--sidebar-color); color: white;
+            display: flex; flex-direction: column; padding: 20px;
         }
 
-        .menu-header { font-size: 20px; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #3e5871; padding-bottom: 10px; }
+        .menu-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; border-bottom: 1px solid #455a64; padding-bottom: 10px; }
         
         .course-list { flex-grow: 1; overflow-y: auto; }
         .course-item { 
-            background: var(--light-blue); padding: 12px; margin-bottom: 10px; 
-            border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+            background: var(--active-color); padding: 12px; margin-bottom: 10px; border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
         }
-        .course-item:hover { background: #455a64; }
-        .del-btn { background: none; border: none; color: #bdc3c7; cursor: pointer; font-size: 16px; }
-        .del-btn:hover { color: var(--danger); }
+        .course-item:hover { background: #4b6584; }
+        .del-btn { background: var(--danger); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
 
-        .wrong-section { border-top: 2px solid #3e5871; padding-top: 15px; margin-top: 10px; }
-        #btn-wrong-pool { 
-            width: 100%; padding: 12px; background: #e67e22; color: white; 
-            border: none; border-radius: 8px; cursor: pointer; font-weight: bold;
-        }
+        .sidebar-footer { border-top: 1px solid #455a64; padding-top: 20px; }
+        .btn-wrong { background: var(--wrong-bg); color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .file-label { background: var(--accent); color: white; display: block; text-align: center; padding: 10px; border-radius: 8px; cursor: pointer; margin-bottom: 5px; }
 
         /* 右側主區域 */
-        #main { flex-grow: 1; display: flex; flex-direction: column; align-items: center; padding: 40px; }
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; padding: 40px; position: relative; }
         
-        .nav-tabs { display: flex; gap: 15px; margin-bottom: 30px; }
-        .tab { padding: 12px 25px; background: white; border-radius: 30px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .tab.active { background: var(--accent); color: white; font-weight: bold; }
-
-        .quiz-container {
-            background: white; width: 100%; max-width: 800px; padding: 50px;
-            border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); text-align: center;
+        .quiz-card { 
+            background: white; width: 100%; max-width: 750px; padding: 40px; 
+            border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center;
         }
 
-        .cn-hint { font-size: 1.2rem; color: #7f8c8d; margin-bottom: 10px; }
-        .sentence-display { font-size: 1.8rem; margin-bottom: 30px; letter-spacing: 1px; }
-        .word-hint { color: var(--accent); font-weight: bold; font-size: 1.1rem; }
+        .mode-switch { margin-bottom: 20px; display: flex; gap: 10px; }
+        .mode-btn { padding: 8px 20px; border-radius: 20px; border: 1px solid #ddd; cursor: pointer; background: white; }
+        .mode-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
 
-        .input-box {
-            width: 80%; padding: 15px; font-size: 1.4rem; border: 2px solid #ddd;
-            border-radius: 10px; margin-bottom: 20px; text-align: center; outline: none;
+        .cn-text { font-size: 1.1rem; color: #666; margin-bottom: 5px; }
+        .hint-text { color: var(--accent); font-weight: bold; margin-bottom: 15px; font-size: 1.2rem; }
+        .sentence { font-size: 1.8rem; margin: 20px 0; min-height: 60px; }
+        
+        .answer-input { 
+            width: 80%; padding: 15px; font-size: 1.4rem; border: 2px solid #ddd; 
+            border-radius: 12px; text-align: center; margin-bottom: 20px; outline: none;
         }
-        .input-box:focus { border-color: var(--accent); }
+        .answer-input:focus { border-color: var(--accent); }
 
-        .action-btns { display: flex; gap: 15px; width: 80%; }
-        .btn { padding: 15px 30px; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem; flex: 1; transition: 0.2s; }
-        .btn-speak { background: #9b59b6; color: white; flex: 0.3; }
-        .btn-submit { background: var(--dark-blue); color: white; }
-        .btn-submit:hover { opacity: 0.9; }
+        .btn-group { display: flex; gap: 10px; justify-content: center; }
+        .btn-ui { padding: 12px 25px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .btn-submit { background: var(--sidebar-color); color: white; flex-grow: 1; }
+        .btn-tool { background: #e0e0e0; color: #333; }
 
-        #feedback { margin-top: 20px; font-size: 1.1rem; font-weight: bold; }
+        #feedback { margin-top: 20px; font-weight: bold; font-size: 1.2rem; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <div class="menu-header">學習菜單</div>
-    <div class="course-list" id="courseList">
-        </div>
+    <div class="menu-title">學習選單</div>
+    <div class="course-list" id="courseList"></div>
     
-    <div class="wrong-section">
-        <input type="file" id="fileInput" accept=".txt" style="display:none">
-        <button class="btn btn-submit" style="width:100%; margin-bottom:10px;" onclick="document.getElementById('fileInput').click()">匯入 TXT 檔案</button>
-        <button id="btn-wrong-pool" onclick="loadWrongPool()">❌ 錯題整理紀錄</button>
+    <div class="sidebar-footer">
+        <label class="file-label">➕ 匯入 TXT / PDF
+            <input type="file" id="fileInput" accept=".txt,.pdf" style="display:none">
+        </label>
+        <button class="btn-wrong" onclick="loadWrongQuestions()">❌ 查看錯題整理</button>
     </div>
 </div>
 
-<div id="main">
-    <div class="nav-tabs">
-        <div class="tab active">句子填空</div>
-        <div class="tab">聽力練習</div>
-        <div class="tab">口說測驗</div>
+<div id="main-content">
+    <div class="mode-switch">
+        <div class="mode-btn active" id="mode-en-cn">中翻英</div>
+        <div class="mode-btn" id="mode-cn-en">英翻中</div>
     </div>
 
-    <div class="quiz-container">
-        <div id="quiz-box">
-            <p class="cn-hint" id="cnHint">請點選左側課程或匯入檔案</p>
-            <p class="word-hint" id="wordHint"></p>
-            <div class="sentence-display" id="sentenceDisplay">等待開始...</div>
-            
-            <input type="text" class="input-box" id="userInput" placeholder="在此輸入答案..." autocomplete="off">
-            
-            <div class="action-btns">
-                <button class="btn btn-speak" onclick="playAudio()">🔊</button>
-                <button class="btn btn-speak" onclick="startSpeech()">🎤</button>
-                <button class="btn btn-submit" onclick="checkAnswer()">送出答案 (Enter)</button>
-            </div>
-            <p id="feedback"></p>
+    <div class="quiz-card" id="quizContainer" style="display:none">
+        <div class="cn-text" id="displayHint1">翻譯提示</div>
+        <div class="hint-text" id="displayLetterHint">s...died</div>
+        <div class="sentence" id="displaySentence">句子載入中...</div>
+        
+        <input type="text" class="answer-input" id="userInput" placeholder="輸入正確單字" autocomplete="off">
+        
+        <div class="btn-group">
+            <button class="btn-ui btn-tool" onclick="playVoice()">🔊 聽力</button>
+            <button class="btn-ui btn-tool" onclick="startMic()">🎤 口說</button>
+            <button class="btn-ui btn-submit" onclick="handleCheck()">送出答案 (Enter)</button>
         </div>
+        <div id="feedback"></div>
     </div>
+    <div id="empty-state" style="margin-top:100px; color:#999;">請從左側匯入或選擇課程</div>
 </div>
 
 <script>
-    let lessons = [];
+    // 資料儲存變數
+    let courses = JSON.parse(localStorage.getItem('edu_courses')) || [];
+    let wrongBank = JSON.parse(localStorage.getItem('edu_wrong')) || [];
     let currentQuiz = [];
     let currentIndex = 0;
-    let wrongPool = [];
+
+    // 初始化介面
+    renderSidebar();
 
     // 1. 檔案匯入處理
-    document.getElementById('fileInput').addEventListener('change', function(e) {
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const content = e.target.result;
-            const lines = content.split('\n').filter(line => line.trim() !== "");
-            
-            // 解析格式: 中文|句子|正確答案|原形單字
-            const quizData = lines.map(line => {
-                const [cn, sen, ans, base] = line.split('|');
-                return { cn, sen, ans: ans.trim(), base: base.trim() };
-            });
-
-            lessons.push({ name: file.name, data: quizData });
-            renderSidebar();
-        };
-        reader.readAsText(file);
+        let content = "";
+        if (file.type === "application/pdf") {
+            content = await readPdf(file);
+        } else {
+            content = await file.text();
+        }
+        
+        parseContent(file.name, content);
     });
 
+    async function readPdf(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+        let text = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            text += textContent.items.map(s => s.str).join(' ') + "\n";
+        }
+        return text;
+    }
+
+    function parseContent(filename, text) {
+        const lines = text.split('\n').filter(l => l.includes('|'));
+        const quizData = lines.map(line => {
+            const [cn, sen, ans, base] = line.split('|').map(s => s.trim());
+            return { cn, sen, ans, base };
+        });
+
+        if (quizData.length > 0) {
+            courses.push({ id: Date.now(), name: filename, data: quizData });
+            saveToStorage();
+            renderSidebar();
+        } else {
+            alert("格式錯誤！請確認檔案內容包含 | 分隔符號");
+        }
+    }
+
+    // 2. 顯示邏輯
     function renderSidebar() {
-        const container = document.getElementById('courseList');
-        container.innerHTML = "";
-        lessons.forEach((lesson, index) => {
-            const item = document.createElement('div');
-            item.className = 'course-item';
-            item.innerHTML = `
-                <span onclick="startLesson(${index})">${lesson.name}</span>
-                <button class="del-btn" onclick="deleteLesson(${index}, event)">✕</button>
+        const list = document.getElementById('courseList');
+        list.innerHTML = "";
+        courses.forEach((c, idx) => {
+            const div = document.createElement('div');
+            div.className = 'course-item';
+            div.innerHTML = `
+                <span onclick="startLesson(${idx})">${c.name}</span>
+                <button class="del-btn" onclick="deleteCourse(${idx})">刪除</button>
             `;
-            container.appendChild(item);
+            list.appendChild(div);
         });
     }
 
-    function deleteLesson(index, e) {
-        e.stopPropagation();
-        lessons.splice(index, 1);
-        renderSidebar();
+    function startLesson(idx) {
+        currentQuiz = courses[idx].data;
+        currentIndex = 0;
+        initUI();
     }
 
-    // 2. 測驗邏輯
-    function startLesson(index) {
-        currentQuiz = lessons[index].data;
-        currentIndex = 0;
+    function initUI() {
+        document.getElementById('empty-state').style.display = "none";
+        document.getElementById('quizContainer').style.display = "block";
         showQuestion();
     }
 
     function showQuestion() {
         if (currentIndex >= currentQuiz.length) {
-            document.getElementById('sentenceDisplay').innerText = "本課練習結束！";
+            document.getElementById('displaySentence').innerText = "課程結束！恭喜完成！";
             return;
         }
-
         const q = currentQuiz[currentIndex];
-        const firstChar = q.ans[0];
-        const lastCharOfBase = q.base[q.base.length - 1];
-
-        document.getElementById('cnHint').innerText = q.cn;
-        document.getElementById('wordHint').innerText = `提示：${firstChar} ... ${lastCharOfBase}`;
-        document.getElementById('sentenceDisplay').innerText = q.sen.replace(q.ans, "_______");
+        
+        // 核心提示邏輯：字首 + 原形尾端的變化部分
+        // 範例: ans=studied, base=study -> s...died
+        const firstLetter = q.ans.charAt(0);
+        
+        // 找出原形最後一個字母在答案單字中的位置，截取後段
+        const baseTail = q.base.slice(-1); 
+        const tailIndex = q.ans.lastIndexOf(baseTail);
+        const tailHint = (tailIndex !== -1 && tailIndex < q.ans.length - 1) 
+                         ? q.ans.slice(tailIndex + 1) 
+                         : q.ans.slice(-1);
+        
+        document.getElementById('displayHint1').innerText = q.cn;
+        document.getElementById('displayLetterHint').innerText = `${firstLetter}...${tailHint}`;
+        document.getElementById('displaySentence').innerText = q.sen.replace(q.ans, "_______");
         document.getElementById('userInput').value = "";
         document.getElementById('feedback').innerText = "";
     }
 
-    function checkAnswer() {
-        const userAns = document.getElementById('userInput').value.trim().toLowerCase();
-        const correctAns = currentQuiz[currentIndex].ans.toLowerCase();
+    // 3. 測驗操作
+    function handleCheck() {
+        const userVal = document.getElementById('userInput').value.trim().toLowerCase();
+        const correctVal = currentQuiz[currentIndex].ans.toLowerCase();
         const feedback = document.getElementById('feedback');
 
-        if (userAns === correctAns) {
-            feedback.innerText = "Excellent! 正確！";
-            feedback.style.color = "var(--success)";
+        if (userVal === correctVal) {
+            feedback.innerText = "答對了！✨";
+            feedback.style.color = "#2ecc71";
             setTimeout(() => {
                 currentIndex++;
                 showQuestion();
             }, 1000);
         } else {
-            feedback.innerText = `再試一次！(正確答案: ${currentQuiz[currentIndex].ans})`;
-            feedback.style.color = "var(--danger)";
-            // 加入錯題集
-            if (!wrongPool.some(item => item.ans === currentQuiz[currentIndex].ans)) {
-                wrongPool.push(currentQuiz[currentIndex]);
+            feedback.innerText = `錯誤！正確答案是: ${currentQuiz[currentIndex].ans}`;
+            feedback.style.color = "#e74c3c";
+            
+            // 加入錯題集 (避免重複)
+            if (!wrongBank.some(w => w.ans === currentQuiz[currentIndex].ans)) {
+                wrongBank.push(currentQuiz[currentIndex]);
+                saveToStorage();
             }
         }
     }
 
-    // 3. 語音功能
-    function playAudio() {
+    function loadWrongQuestions() {
+        if (wrongBank.length === 0) return alert("目前沒有錯題紀錄！");
+        currentQuiz = [...wrongBank];
+        currentIndex = 0;
+        initUI();
+        alert("已載入錯題複習模式");
+    }
+
+    // 4. 語音工具
+    function playVoice() {
         const q = currentQuiz[currentIndex];
-        const msg = new SpeechSynthesisUtterance(q.sen);
+        const msg = new SpeechSynthesisUtterance(q.sen.replace("_______", q.ans));
         msg.lang = 'en-US';
         window.speechSynthesis.speak(msg);
     }
 
-    function startSpeech() {
+    function startMic() {
         const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
         recognition.lang = 'en-US';
-        recognition.start();
         recognition.onresult = (event) => {
             document.getElementById('userInput').value = event.results[0][0].transcript;
         };
+        recognition.start();
     }
 
-    // 4. 錯題整理
-    function loadWrongPool() {
-        if (wrongPool.length === 0) {
-            alert("目前沒有錯題紀錄喔！太棒了！");
-            return;
-        }
-        currentQuiz = [...wrongPool];
-        currentIndex = 0;
-        showQuestion();
-        alert("已載入錯題複習模式");
+    // 5. 系統工具
+    function deleteCourse(idx) {
+        courses.splice(idx, 1);
+        saveToStorage();
+        renderSidebar();
     }
 
-    // Enter 鍵監聽
-    document.getElementById('userInput').addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') checkAnswer();
+    function saveToStorage() {
+        localStorage.setItem('edu_courses', JSON.stringify(courses));
+        localStorage.setItem('edu_wrong', JSON.stringify(wrongBank));
+    }
+
+    // Enter 鍵送出
+    document.getElementById('userInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleCheck();
     });
 </script>
 
