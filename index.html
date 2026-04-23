@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 英文學習系統</title>
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --primary-color: #5d5cde;
+            --bg-color: #f8f9fa;
+        }
+
+        body { font-family: 'PingFang TC', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg-color); }
+
+        /* 左側側邊欄 */
+        #sidebar {
+            width: var(--sidebar-width);
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .menu-title { font-size: 1.2rem; margin-bottom: 20px; border-bottom: 1px solid #455a64; padding-bottom: 10px; }
+        
+        .course-list { flex-grow: 1; overflow-y: auto; }
+        .course-item { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px; margin-bottom: 8px; background: #34495e; border-radius: 5px; cursor: pointer;
+        }
+        .course-item:hover { background: #455a64; }
+        .delete-btn { color: #ff7675; border: none; background: none; cursor: pointer; }
+
+        .import-section { margin-top: 20px; border-top: 1px solid #455a64; padding-top: 20px; }
+        #wrong-list-btn { 
+            background: #e67e22; color: white; border: none; padding: 12px; 
+            width: 100%; border-radius: 5px; cursor: pointer; margin-top: 10px;
+        }
+
+        /* 右側主畫面 */
+        #main-content { flex-grow: 1; padding: 40px; display: flex; flex-direction: column; align-items: center; }
+        
+        .mode-tabs { display: flex; gap: 10px; margin-bottom: 30px; }
+        .tab { padding: 15px 30px; background: white; border: 1px solid #ddd; border-radius: 10px; cursor: pointer; }
+        .tab.active { border: 2px solid var(--primary-color); background: #eef2ff; font-weight: bold; }
+
+        .quiz-card { 
+            background: white; width: 100%; max-width: 700px; padding: 40px; 
+            border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center;
+        }
+
+        .hint-text { font-size: 1.1rem; color: #666; margin-bottom: 10px; }
+        .sentence { font-size: 1.5rem; margin-bottom: 25px; }
+        .cloze-input { 
+            font-size: 1.2rem; padding: 10px; width: 80%; border: 1px solid #ddd; 
+            border-radius: 8px; text-align: center; margin-bottom: 20px;
+        }
+
+        .btn-group { display: flex; gap: 10px; justify-content: center; width: 100%; }
+        .btn { padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: 0.3s; }
+        .btn-audio { background: #a29bfe; color: white; }
+        .btn-submit { background: #2d3436; color: white; flex-grow: 1; }
+        
+        #result-msg { margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div class="menu-title">學習菜單</div>
+        <div class="course-list" id="course-list">
+            </div>
+        
+        <div class="import-section">
+            <input type="file" id="file-input" style="display:none" accept=".json">
+            <button class="btn btn-audio" style="width:100%" onclick="document.getElementById('file-input').click()">匯入課程 (JSON)</button>
+            <button id="wrong-list-btn" onclick="showWrongQuestions()">查看錯題整理</button>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div class="mode-tabs">
+            <div class="tab">單字拼寫</div>
+            <div class="tab">聽力聽寫</div>
+            <div class="tab active">句子填空</div>
+        </div>
+
+        <div class="quiz-card">
+            <div id="quiz-container">
+                <div class="hint-text" id="cn-text">請先匯入課程檔案</div>
+                <div class="sentence" id="en-sentence">等待開始...</div>
+                <input type="text" class="cloze-input" id="user-input" placeholder="請輸入答案">
+                
+                <div class="btn-group">
+                    <button class="btn btn-audio" onclick="playAudio()">🔊 語音</button>
+                    <button class="btn btn-submit" onclick="checkAnswer()">送出答案 (Enter)</button>
+                </div>
+                <div id="result-msg"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentLessons = [];
+        let currentQuestionIndex = 0;
+        let selectedLesson = null;
+        let wrongQuestions = [];
+
+        // 監聽檔案上傳
+        document.getElementById('file-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const data = JSON.parse(event.target.result);
+                const lessonName = file.name.replace('.json', '');
+                currentLessons.push({ name: lessonName, data: data });
+                renderSidebar();
+            };
+            reader.readAsText(file);
+        });
+
+        function renderSidebar() {
+            const list = document.getElementById('course-list');
+            list.innerHTML = '';
+            currentLessons.forEach((lesson, index) => {
+                const div = document.createElement('div');
+                div.className = 'course-item';
+                div.innerHTML = `
+                    <span onclick="startLesson(${index})">${lesson.name}</span>
+                    <button class="delete-btn" onclick="deleteLesson(${index})">🗑️</button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function deleteLesson(index) {
+            currentLessons.splice(index, 1);
+            renderSidebar();
+        }
+
+        function startLesson(index) {
+            selectedLesson = currentLessons[index].data;
+            currentQuestionIndex = 0;
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (!selectedLesson) return;
+            const q = selectedLesson[currentQuestionIndex];
+            
+            // 邏輯：字首 + 填空 + 原形字尾
+            // 假設資料結構包含 { word: "studied", base: "study", sentence: "He ___ hard.", cn: "他努力學習" }
+            const firstChar = q.word.charAt(0);
+            const lastCharOfBase = q.base.charAt(q.base.length - 1);
+            const displayHint = `${firstChar} ... ${lastCharOfBase}`;
+
+            document.getElementById('cn-text').innerText = `${q.cn} (${displayHint})`;
+            document.getElementById('en-sentence').innerText = q.sentence.replace('___', '______');
+            document.getElementById('user-input').value = '';
+            document.getElementById('result-msg').innerText = '';
+        }
+
+        function checkAnswer() {
+            const q = selectedLesson[currentQuestionIndex];
+            const userAnswer = document.getElementById('user-input').value.trim().toLowerCase();
+            const correctAnswer = q.word.toLowerCase();
+
+            if (userAnswer === correctAnswer) {
+                document.getElementById('result-msg').innerHTML = "<span style='color:green'>正確！</span>";
+                nextQuestion();
+            } else {
+                document.getElementById('result-msg').innerHTML = `<span style='color:red'>錯誤。答案是: ${q.word}</span>`;
+                // 加入錯題清單
+                if(!wrongQuestions.includes(q)) {
+                    wrongQuestions.push(q);
+                }
+            }
+        }
+
+        function nextQuestion() {
+            setTimeout(() => {
+                currentQuestionIndex++;
+                if (currentQuestionIndex < selectedLesson.length) {
+                    showQuestion();
+                } else {
+                    alert("課程結束！");
+                }
+            }, 1500);
+        }
+
+        function playAudio() {
+            const q = selectedLesson[currentQuestionIndex];
+            const msg = new SpeechSynthesisUtterance(q.sentence.replace('___', q.word));
+            msg.lang = 'en-US';
+            window.speechSynthesis.speak(msg);
+        }
+
+        function showWrongQuestions() {
+            if (wrongQuestions.length === 0) {
+                alert("目前沒有錯題紀錄！");
+                return;
+            }
+            selectedLesson = wrongQuestions;
+            currentQuestionIndex = 0;
+            alert("已載入錯題複習模式");
+            showQuestion();
+        }
+
+        // 支援 Enter 送出
+        document.getElementById('user-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') checkAnswer();
+        });
+    </script>
+</body>
+</html>
