@@ -2,253 +2,182 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 英文學習系統 - 強化版</title>
+    <title>我的英文學習 App</title>
     <style>
-        :root {
-            --sidebar-bg: #2c3e50;
-            --main-bg: #f8f9fa;
-            --accent: #6c5ce7;
-            --wrong: #e67e22;
-            --danger: #ff7675;
-        }
-
-        body { font-family: 'PingFang TC', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--main-bg); overflow: hidden; }
-
-        /* 左側側邊欄 */
-        #sidebar {
-            width: 280px; background: var(--sidebar-bg); color: white;
-            display: flex; flex-direction: column; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-        }
-
-        .sidebar-header { font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #455a64; }
+        :root { --side: #2c3e50; --bg: #f5f6fa; --primary: #6c5ce7; }
+        body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; background: var(--bg); }
         
-        #course-list { flex-grow: 1; overflow-y: auto; margin-bottom: 20px; }
-        .course-item { 
+        /* 側邊欄固定按鈕 */
+        #sidebar { width: 300px; background: var(--side); color: white; display: flex; flex-direction: column; padding: 15px; }
+        .list-area { flex-grow: 1; overflow-y: auto; margin-top: 10px; }
+        .course-btn { 
             background: #34495e; padding: 12px; margin-bottom: 8px; border-radius: 8px;
-            display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
         }
-        .course-item:hover { background: #4b6584; }
-        .course-item span { flex-grow: 1; }
-        .btn-del { background: var(--danger); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem; }
-
-        .sidebar-footer { border-top: 1px solid #455a64; padding-top: 15px; }
-        .btn-import { background: var(--accent); color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
-        .btn-wrong { background: var(--wrong); color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-
-        /* 右側主區域 */
-        #main { flex-grow: 1; padding: 40px; display: flex; flex-direction: column; align-items: center; }
+        .del-x { background: #ff7675; border: none; color: white; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
         
-        .quiz-card { 
-            background: white; width: 90%; max-width: 800px; padding: 40px; 
-            border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center;
-        }
+        .bottom-controls { border-top: 1px solid #444; padding-top: 15px; }
+        .big-btn { width: 100%; padding: 15px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-bottom: 10px; font-size: 16px; }
+        .btn-import { background: var(--primary); color: white; }
+        .btn-wrong { background: #e67e22; color: white; }
 
-        .sentence { font-size: 1.8rem; margin: 20px 0; color: #2d3436; font-weight: 500; }
-        .cn-hint { font-size: 1.1rem; color: #636e72; margin-bottom: 10px; }
-        .letter-hint { color: var(--accent); font-weight: bold; font-size: 1.2rem; }
-
-        .input-box {
-            width: 80%; padding: 15px; font-size: 1.4rem; border: 2px solid #dfe6e9; 
-            border-radius: 12px; text-align: center; outline: none; margin-bottom: 20px;
-        }
-        .input-box:focus { border-color: var(--accent); }
-
-        .btn-group { display: flex; gap: 15px; justify-content: center; width: 80%; }
-        .btn-action { padding: 12px 25px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; flex: 1; }
-        .btn-voice { background: #a29bfe; color: white; }
-        .btn-submit { background: var(--sidebar-bg); color: white; }
-
-        #result { margin-top: 20px; font-weight: bold; font-size: 1.2rem; min-height: 1.5em; }
+        /* 主畫面 */
+        #main { flex-grow: 1; display: flex; flex-direction: column; align-items: center; padding: 40px; }
+        .card { background: white; width: 100%; max-width: 600px; padding: 30px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); text-align: center; }
+        
+        .input-style { width: 90%; padding: 15px; font-size: 20px; border: 2px solid #ddd; border-radius: 10px; margin: 20px 0; text-align: center; }
+        .control-row { display: flex; gap: 10px; justify-content: center; }
+        .action-btn { padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-check { background: #2d3436; color: white; flex-grow: 1; }
+        .btn-tool { background: #eee; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
-    <div class="sidebar-header">學習菜單</div>
-    <div id="course-list">
-        </div>
+    <div style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">學習菜單</div>
+    <div class="list-area" id="courseList"></div>
     
-    <div class="sidebar-footer">
-        <input type="file" id="fileInput" accept=".txt" style="display:none">
-        <button class="btn-import" onclick="document.getElementById('fileInput').click()">匯入檔案 (.txt)</button>
-        <button class="btn-wrong" onclick="loadWrongBank()">❌ 錯題整理紀錄</button>
+    <div class="bottom-controls">
+        <input type="file" id="fileIn" style="display:none" accept=".txt">
+        <button class="big-btn btn-import" onclick="document.getElementById('fileIn').click()">匯入 TXT 檔案</button>
+        <button class="big-btn btn-wrong" onclick="startWrongMode()">❌ 錯題整理按鈕</button>
     </div>
 </div>
 
 <div id="main">
-    <div class="quiz-card" id="quiz-ui" style="display:none">
-        <div class="cn-hint" id="cn-text">中文翻譯</div>
-        <div class="letter-hint" id="hint-text">提示：s...y</div>
-        <div class="sentence" id="en-sentence">He _______ hard yesterday.</div>
+    <div class="card" id="quizCard" style="display:none">
+        <div id="cnHint" style="color: #666; font-size: 18px;"></div>
+        <div id="letterHint" style="color: var(--primary); font-weight: bold; font-size: 24px; margin: 10px 0;"></div>
+        <div id="senDisplay" style="font-size: 22px; margin-bottom: 20px;"></div>
         
-        <input type="text" class="input-box" id="user-input" placeholder="在此輸入答案..." autocomplete="off">
+        <input type="text" id="userInput" class="input-style" placeholder="輸入英文...">
         
-        <div class="btn-group">
-            <button class="btn-action btn-voice" onclick="playVoice()">🔊 聽力 / 🎤 口說</button>
-            <button class="btn-action btn-submit" onclick="checkAnswer()">對答案 (Enter)</button>
+        <div class="control-row">
+            <button class="action-btn btn-tool" onclick="speak()">🔊 聽力</button>
+            <button class="action-btn btn-tool" onclick="listen()">🎤 口說</button>
+            <button class="action-btn btn-check" onclick="check()">對答案 (Enter)</button>
         </div>
-        <div id="result"></div>
+        <div id="msg" style="margin-top: 15px; font-weight: bold;"></div>
     </div>
-    <div id="welcome-msg" style="margin-top: 100px; color: #b2bec3; text-align: center;">
-        <h2>歡迎使用</h2>
-        <p>請先從左側點擊「匯入檔案」，選取你的 TXT 內容。</p>
-    </div>
+    <div id="empty" style="margin-top: 100px; color: #999;">目前沒有課程，請先匯入檔案。</div>
 </div>
 
 <script>
-    // 資料結構：lessons = [{ name: '第一課', data: [...] }]
-    let lessons = JSON.parse(localStorage.getItem('eng_lessons')) || [];
-    let wrongBank = JSON.parse(localStorage.getItem('eng_wrong')) || [];
-    let currentQuizData = [];
-    let currentIndex = 0;
+    let db = JSON.parse(localStorage.getItem('my_eng_db')) || [];
+    let wrongs = JSON.parse(localStorage.getItem('my_wrong_db')) || [];
+    let activeList = [];
+    let idx = 0;
 
-    // 初始化側邊欄
-    refreshSidebar();
+    renderList();
 
-    // 1. 檔案讀取功能
-    document.getElementById('fileInput').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const content = e.target.result;
-            const lines = content.split('\n').filter(l => l.trim().includes('|'));
-            
-            const quizData = lines.map(line => {
-                const parts = line.split('|').map(s => s.trim());
-                return { cn: parts[0], sen: parts[1], ans: parts[2], base: parts[3] };
+    // 強大的讀取邏輯：不限格式，只要有字就抓
+    document.getElementById('fileIn').onchange = function(e) {
+        let file = e.target.files[0];
+        if(!file) return;
+        let reader = new FileReader();
+        reader.onload = function(re) {
+            let lines = re.target.result.split('\n').filter(l => l.trim() !== "");
+            let quiz = lines.map(l => {
+                let p = l.split(/[|,-]/); // 支援 | 或 , 或 - 分隔
+                return {
+                    cn: p[0] || "未提供中文",
+                    sen: p[1] || `How to spell "${p[2] || p[0]}"?`, // 若沒給句子自動生成
+                    ans: (p[2] || p[0]).trim(),
+                    base: (p[3] || p[2] || p[0]).trim()
+                };
             });
-
-            if (quizData.length > 0) {
-                lessons.push({ id: Date.now(), name: file.name.replace('.txt', ''), data: quizData });
-                saveData();
-                refreshSidebar();
-                alert('匯入成功！課程已保存在左側。');
-            } else {
-                alert('格式不正確！請確保內容為：中文|句子|正確單字|原形單字');
-            }
+            db.push({ name: file.name, data: quiz });
+            save();
+            renderList();
         };
         reader.readAsText(file);
-    });
+    };
 
-    // 2. 側邊欄與存檔功能
-    function refreshSidebar() {
-        const list = document.getElementById('course-list');
-        list.innerHTML = "";
-        lessons.forEach((course, index) => {
-            const div = document.createElement('div');
-            div.className = 'course-item';
-            div.innerHTML = `
-                <span onclick="startLesson(${index})">${course.name}</span>
-                <button class="btn-del" onclick="deleteLesson(${index}, event)">刪除</button>
-            `;
-            list.appendChild(div);
+    function renderList() {
+        let h = "";
+        db.forEach((c, i) => {
+            h += `<div class="course-btn"><span onclick="load(${i})">${c.name}</span>
+                  <button class="del-x" onclick="del(${i})">刪除</button></div>`;
         });
+        document.getElementById('courseList').innerHTML = h;
     }
 
-    function deleteLesson(index, event) {
-        event.stopPropagation(); // 防止觸發課程點擊
-        if (confirm('確定要刪除這一課嗎？')) {
-            lessons.splice(index, 1);
-            saveData();
-            refreshSidebar();
-            location.reload(); // 重新整理清空當前畫面
-        }
+    function save() {
+        localStorage.setItem('my_eng_db', JSON.stringify(db));
+        localStorage.setItem('my_wrong_db', JSON.stringify(wrongs));
     }
 
-    function saveData() {
-        localStorage.setItem('eng_lessons', JSON.stringify(lessons));
-        localStorage.setItem('eng_wrong', JSON.stringify(wrongBank));
+    function del(i) {
+        db.splice(i, 1);
+        save();
+        renderList();
     }
 
-    // 3. 測驗邏輯
-    function startLesson(index) {
-        currentQuizData = lessons[index].data;
-        initQuiz();
+    function load(i) {
+        activeList = db[i].data;
+        idx = 0;
+        document.getElementById('empty').style.display = 'none';
+        document.getElementById('quizCard').style.display = 'block';
+        show();
     }
 
-    function initQuiz() {
-        currentIndex = 0;
-        document.getElementById('welcome-msg').style.display = "none";
-        document.getElementById('quiz-ui').style.display = "block";
-        showQuestion();
-    }
-
-    function showQuestion() {
-        if (currentIndex >= currentQuizData.length) {
-            document.getElementById('en-sentence').innerText = "本課練習完畢！";
+    function show() {
+        if(idx >= activeList.length) {
+            document.getElementById('senDisplay').innerText = "練習結束！";
             return;
         }
-        const q = currentQuizData[currentIndex];
-        
+        let q = activeList[idx];
+        document.getElementById('cnHint').innerText = q.cn;
         // 字首 + 原形字尾邏輯
-        const firstChar = q.ans.charAt(0);
-        const lastCharBase = q.base.charAt(q.base.length - 1);
-        
-        document.getElementById('cn-text').innerText = q.cn;
-        document.getElementById('hint-text').innerText = `提示：${firstChar}...${lastCharBase}`;
-        document.getElementById('en-sentence').innerText = q.sen.replace(q.ans, "_______");
-        document.getElementById('user-input').value = "";
-        document.getElementById('result').innerText = "";
+        let hint = q.ans[0] + "..." + q.base.slice(-1);
+        document.getElementById('letterHint').innerText = "提示：" + hint;
+        document.getElementById('senDisplay').innerText = q.sen.includes("___") ? q.sen : q.sen + " (" + q.ans + ")";
+        document.getElementById('userInput').value = "";
+        document.getElementById('msg').innerText = "";
     }
 
-    function checkAnswer() {
-        const userAns = document.getElementById('user-input').value.trim().toLowerCase();
-        const correctAns = currentQuizData[currentIndex].ans.toLowerCase();
-        const feedback = document.getElementById('result');
-
-        if (userAns === correctAns) {
-            feedback.innerHTML = "<span style='color:#27ae60'>答對了！✨</span>";
-            setTimeout(() => {
-                currentIndex++;
-                showQuestion();
-            }, 1000);
+    function check() {
+        let ua = document.getElementById('userInput').value.trim().toLowerCase();
+        let ca = activeList[idx].ans.toLowerCase();
+        if(ua === ca) {
+            document.getElementById('msg').innerText = "✅ 正確！";
+            document.getElementById('msg').style.color = "green";
+            setTimeout(() => { idx++; show(); }, 800);
         } else {
-            feedback.innerHTML = `<span style='color:#e74c3c'>錯誤！答案是: ${currentQuizData[currentIndex].ans}</span>`;
-            
-            // 加入錯題集 (檢查重複)
-            const exists = wrongBank.some(w => w.ans === currentQuizData[currentIndex].ans);
-            if (!exists) {
-                wrongBank.push(currentQuizData[currentIndex]);
-                saveData();
+            document.getElementById('msg').innerText = "❌ 錯了，答案是: " + activeList[idx].ans;
+            document.getElementById('msg').style.color = "red";
+            if(!wrongs.some(w => w.ans === activeList[idx].ans)) {
+                wrongs.push(activeList[idx]);
+                save();
             }
         }
     }
 
-    // 4. 錯題集功能
-    function loadWrongBank() {
-        if (wrongBank.length === 0) {
-            alert('目前沒有錯題紀錄喔！');
-            return;
-        }
-        currentQuizData = wrongBank;
-        initQuiz();
-        alert('已載入「錯題整理」模式');
+    function startWrongMode() {
+        if(wrongs.length === 0) return alert("沒有錯題紀錄");
+        activeList = wrongs;
+        idx = 0;
+        document.getElementById('empty').style.display = 'none';
+        document.getElementById('quizCard').style.display = 'block';
+        show();
     }
 
-    // 5. 語音工具
-    function playVoice() {
-        const q = currentQuizData[currentIndex];
-        const msg = new SpeechSynthesisUtterance(q.sen.replace("_______", q.ans));
-        msg.lang = 'en-US';
-        window.speechSynthesis.speak(msg);
-
-        // 同時啟動辨識 (口說)
-        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = 'en-US';
-        recognition.onresult = (event) => {
-            document.getElementById('user-input').value = event.results[0][0].transcript;
-        };
-        recognition.start();
+    function speak() {
+        let q = activeList[idx];
+        let s = new SpeechSynthesisUtterance(q.sen.replace("___", q.ans));
+        s.lang = 'en-US';
+        window.speechSynthesis.speak(s);
     }
 
-    // 監聽 Enter 鍵
-    document.getElementById('user-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') checkAnswer();
-    });
+    function listen() {
+        let r = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        r.lang = 'en-US';
+        r.onresult = e => document.getElementById('userInput').value = e.results[0][0].transcript;
+        r.start();
+    }
+
+    document.getElementById('userInput').onkeypress = e => { if(e.key === 'Enter') check(); };
 </script>
-
 </body>
 </html>
